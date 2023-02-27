@@ -1,0 +1,20 @@
+{
+  "name": "express-mesto-gha",
+  "version": "0.1.0",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Irina199212/express-mesto-gha"
+  },
+  "scripts": {
+    "start": "",
+    "dev": "",
+    "lint": "npx eslint ."
+  },
+  "devDependencies": {
+    "eslint": "^8.35.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-react": "^7.32.2"
+  }
+}
