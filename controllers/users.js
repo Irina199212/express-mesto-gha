@@ -1,57 +1,89 @@
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
 const User = require('../models/user');
+const { JWT_SECRET } = require('../config');
 const NotFoundError = require('../errors/notfound');
-const { NOT_FOUND_STATUS, SERVER_DEFAULT_STATUS, INVALID_STATUS } = require('../errors/status');
 
-module.exports.getUsers = (req, res) => {
-  User.find({})
-    .then((users) => res.send({ data: users }))
-    .catch(() => {
-      res.status(SERVER_DEFAULT_STATUS).send({ message: 'Ошибка по умолчанию' });
-    });
-};
+module.exports.createUser = (req, res, next) => {
+  const name = req.body.name ? req.body.name : 'Жак-Ив Кусто';
+  const about = req.body.about ? req.body.about : 'Исследователь';
+  const avatar = req.body.avatar
+    ? req.body.avatar
+    : 'https://pictures.s3.yandex.net/resources/jacques-cousteau_1604399756.png';
+  const { email, password } = req.body;
 
-module.exports.getUser = (req, res) => {
-  User.findById(req.params.userId).orFail(() => {
-    throw new NotFoundError('Пользователь по указанному _id не найден');
-  })
-    .then((users) => res.send({ data: users }))
-    .catch((err) => {
-      if (err.name === 'CastError') {
-        res.status(NOT_FOUND_STATUS).send({
-          message: 'Пользователь по указанному _id не найден',
-        });
-        return;
-      }
-
-      if (err.name === 'NotFoundError') {
-        res.status(NOT_FOUND_STATUS).send({
-          message: 'Пользователь по указанному _id не найден',
-        });
-        return;
-      }
-
-      res.status(SERVER_DEFAULT_STATUS).send({ message: 'Ошибка по умолчанию' });
-    });
-};
-
-module.exports.createUser = (req, res) => {
-  const { name, about, avatar } = req.body;
-
-  User.create({ name, about, avatar })
+  bcrypt
+    .hash(password, 10)
+    .then((hash) => User.create({
+      name, about, avatar, email, password: hash,
+    }))
     .then((user) => res.send({ data: user }))
     .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(INVALID_STATUS).send({
-          message: 'Переданы некорректные данные при создании пользователя',
-        });
-        return;
-      }
-
-      res.status(SERVER_DEFAULT_STATUS).send({ message: 'Ошибка по умолчанию' });
+      next(err);
     });
 };
 
-module.exports.updateUser = (req, res) => {
+module.exports.login = (req, res, next) => {
+  const { email, password } = req.body;
+  User.findOne({ email })
+    .select('+password')
+    .orFail(() => {
+      throw new NotFoundError('Пользователь по указанному _id не найден');
+    })
+    .then((user) => {
+      if (!user) {
+        return Promise.reject(new Error('Неправильные почта или пароль'));
+      }
+      return bcrypt.compare(password, user.password).then((matched) => {
+        if (!matched) {
+          return Promise.reject(new Error('Неправильные почта или пароль'));
+        }
+        return user;
+      });
+    })
+    .then((user) => {
+      const token = jwt.sign({ _id: user._id }, JWT_SECRET, {
+        expiresIn: '7d',
+      });
+      res.send({ jwt: token });
+    })
+    .catch((err) => {
+      next(err);
+    });
+};
+
+module.exports.getCurrentUser = (req, res, next) => {
+  User.findById(req.user._id)
+    .orFail(() => {
+      throw new NotFoundError('Пользователь по указанному _id не найден');
+    })
+    .then((users) => res.send({ data: users }))
+    .catch((err) => {
+      next(err);
+    });
+};
+
+module.exports.getUsers = (req, res, next) => {
+  User.find({})
+    .then((users) => res.send({ data: users }))
+    .catch((err) => {
+      next(err);
+    });
+};
+
+module.exports.getUser = (req, res, next) => {
+  User.findById(req.params.userId)
+    .orFail(() => {
+      throw new NotFoundError('Пользователь по указанному _id не найден');
+    })
+    .then((users) => res.send({ data: users }))
+    .catch((err) => {
+      next(err);
+    });
+};
+
+module.exports.updateUser = (req, res, next) => {
   const { name, about } = req.body;
   User.findByIdAndUpdate(
     req.user._id,
@@ -61,36 +93,17 @@ module.exports.updateUser = (req, res) => {
       runValidators: true,
       upsert: false,
     },
-  ).orFail(() => {
-    throw new NotFoundError('Пользователь по указанному _id не найден');
-  })
+  )
+    .orFail(() => {
+      throw new NotFoundError('Пользователь по указанному _id не найден');
+    })
     .then((user) => res.send({ data: user }))
     .catch((err) => {
-      if (err.name === 'NotFoundError') {
-        res.status(NOT_FOUND_STATUS).send({
-          message: 'Пользователь по указанному _id не найден',
-        });
-        return;
-      }
-      if (err.name === 'ValidationError') {
-        res.status(INVALID_STATUS).send({
-          message: 'Переданы некорректные данные при обновлении профиля',
-        });
-        return;
-      }
-
-      if (err.name === 'CastError') {
-        res.status(NOT_FOUND_STATUS).send({
-          message: 'Пользователь с указаvнным _id не найден',
-        });
-        return;
-      }
-
-      res.status(SERVER_DEFAULT_STATUS).send({ message: 'Ошибка по умолчанию' });
+      next(err);
     });
 };
 
-module.exports.updateUserAvater = (req, res) => {
+module.exports.updateUserAvater = (req, res, next) => {
   const { avatar } = req.body;
   User.findByIdAndUpdate(
     req.user._id,
@@ -100,31 +113,12 @@ module.exports.updateUserAvater = (req, res) => {
       runValidators: true,
       upsert: false,
     },
-  ).orFail(() => {
-    throw new NotFoundError('Пользователь по указанному _id не найден');
-  })
+  )
+    .orFail(() => {
+      throw new NotFoundError('Пользователь по указанному _id не найден');
+    })
     .then((user) => res.send({ data: user }))
     .catch((err) => {
-      if (err.name === 'NotFoundError') {
-        res.status(NOT_FOUND_STATUS).send({
-          message: 'Пользователь по указанному _id не найден',
-        });
-        return;
-      }
-      if (err.name === 'ValidationError') {
-        res.status(INVALID_STATUS).send({
-          message: 'Переданы некорректные данные при обновлении аватара',
-        });
-        return;
-      }
-
-      if (err.name === 'CastError') {
-        res.status(NOT_FOUND_STATUS).send({
-          message: 'Пользователь с указанным _id не найден',
-        });
-        return;
-      }
-
-      res.status(SERVER_DEFAULT_STATUS).send({ message: 'Ошибка по умолчанию' });
+      next(err);
     });
 };
