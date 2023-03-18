@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const { JWT_SECRET } = require('../config');
 const NotFoundError = require('../errors/notfound');
+const AccessError = require('../errors/access');
 
 module.exports.createUser = (req, res, next) => {
   const name = req.body.name ? req.body.name : 'Жак-Ив Кусто';
@@ -15,10 +16,27 @@ module.exports.createUser = (req, res, next) => {
 
   bcrypt
     .hash(password, 10)
-    .then((hash) => User.create({
-      name, about, avatar, email, password: hash,
-    }))
-    .then((user) => res.send({ data: user }))
+    .then((hash) => User.create(
+      {
+        name,
+        about,
+        avatar,
+        email,
+        password: hash,
+      },
+    ))
+    .then((user) => {
+      res.send({
+        data: {
+          name: user.name,
+          about: user.about,
+          avatar: user.avatar,
+          email: user.email,
+          _id: user._id,
+          __v: user.__v,
+        },
+      });
+    })
     .catch((err) => {
       next(err);
     });
@@ -85,19 +103,33 @@ module.exports.getUser = (req, res, next) => {
 
 module.exports.updateUser = (req, res, next) => {
   const { name, about } = req.body;
-  User.findByIdAndUpdate(
-    req.user._id,
-    { name, about },
-    {
-      new: true,
-      runValidators: true,
-      upsert: false,
-    },
-  )
+
+  User.findById(req.user._id)
     .orFail(() => {
-      throw new NotFoundError('Пользователь по указанному _id не найден');
+      throw new NotFoundError('Пользователь с указанным _id не найден');
     })
-    .then((user) => res.send({ data: user }))
+    .then((user) => {
+      if (user._id.toString() !== req.user._id) {
+        throw new AccessError('Доступ запрещен');
+      }
+
+      User.findByIdAndUpdate(
+        req.user._id,
+        { name, about },
+        {
+          new: true,
+          runValidators: true,
+          upsert: false,
+        },
+      )
+        .orFail(() => {
+          throw new NotFoundError('Пользователь по указанному _id не найден');
+        })
+        .then((userData) => res.send({ data: userData }))
+        .catch((err) => {
+          next(err);
+        });
+    })
     .catch((err) => {
       next(err);
     });
@@ -105,20 +137,33 @@ module.exports.updateUser = (req, res, next) => {
 
 module.exports.updateUserAvater = (req, res, next) => {
   const { avatar } = req.body;
-  User.findByIdAndUpdate(
-    req.user._id,
-    { avatar },
-    {
-      new: true,
-      runValidators: true,
-      upsert: false,
-    },
-  )
+
+  User.findById(req.user._id)
     .orFail(() => {
-      throw new NotFoundError('Пользователь по указанному _id не найден');
+      throw new NotFoundError('Пользователь с указанным _id не найден');
     })
-    .then((user) => res.send({ data: user }))
-    .catch((err) => {
+    .then((user) => {
+      if (user._id.toString() !== req.user._id) {
+        throw new AccessError('Доступ запрещен');
+      }
+
+      return User.findByIdAndUpdate(
+        req.user._id,
+        { avatar },
+        {
+          new: true,
+          runValidators: true,
+          upsert: false,
+        },
+      )
+        .orFail(() => {
+          throw new NotFoundError('Пользователь по указанному _id не найден');
+        })
+        .then((userData) => res.send({ data: userData }))
+        .catch((err) => {
+          next(err);
+        });
+    }).catch((err) => {
       next(err);
     });
 };
