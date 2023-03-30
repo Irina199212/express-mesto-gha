@@ -3,7 +3,7 @@ const express = require('express');
 const { celebrate, Joi, errors } = require('celebrate');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
-
+const NotFoundError = require('./errors/notfound');
 const { PORT, DB } = require('./config');
 const { createUser, login } = require('./controllers/users');
 const auth = require('./middlewares/auth');
@@ -48,6 +48,10 @@ app.use(auth);
 
 app.use('/users', require('./routes/users'));
 app.use('/cards', require('./routes/cards'));
+
+app.use((req, res, next) => {
+  next(new NotFoundError('Маршрут не найден'));
+});
 
 app.use(errors());
 app.use(errorsContainer);
