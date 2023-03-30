@@ -36,7 +36,6 @@ module.exports.createUser = (req, res, next) => {
           avatar: user.avatar,
           email: user.email,
           _id: user._id,
-          __v: user.__v,
         },
       });
     })

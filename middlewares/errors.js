@@ -6,7 +6,7 @@ const errors = (err, req, res, next) => {
   const message = statusCode === SERVER_DEFAULT_STATUS ? '' : err.message;
 
   res.status(statusCode).send({ message });
-
+  next();
   // if (err.code === 11000) {
   //   res.status(REGISTER_STATUS).send({
   //     message: 'Пользователь с указанным email уже существует',

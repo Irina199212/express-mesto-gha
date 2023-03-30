@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
+const patternurl = require('../helpers/helper');
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -20,11 +21,7 @@ const userSchema = new mongoose.Schema({
       'https://pictures.s3.yandex.net/resources/jacques-cousteau_1604399756.png',
     validate: {
       validator(v) {
-        return validator.matches(
-          v,
-          /* eslint-disable-next-line */
-          /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i
-        );
+        return validator.matches(v, patternurl);
       },
       message: 'Поле "avatar" должно быть ссылкой',
     },
