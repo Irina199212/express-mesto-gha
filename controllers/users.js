@@ -95,7 +95,11 @@ module.exports.getUser = (req, res, next) => {
     })
     .then((users) => res.send({ data: users }))
     .catch((err) => {
-      next(err);
+      if (err.name === 'CastError') {
+        next(new NotFoundError('По указанному _id ничего не найдено'));
+      } else {
+        next(err);
+      }
     });
 };
 
