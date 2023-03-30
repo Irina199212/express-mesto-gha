@@ -57,14 +57,7 @@ module.exports.login = (req, res, next) => {
     .orFail(() => {
       throw new TokenError('Пользователь по указанному _id не найден');
     })
-    .then((user) => {
-      bcrypt.compare(password, user.password).then((matched) => {
-        if (!matched) {
-          return Promise.reject(new TokenError('Неправильные почта или пароль'));
-        }
-        return user;
-      });
-    })
+    .then((user) => bcrypt.compare(password, user.password).then((matched) => { if (!matched) { return Promise.reject(new TokenError('Неправильные почта или пароль')); } return user; }))
     .then((user) => {
       const token = jwt.sign({ _id: user._id }, JWT_SECRET, {
         expiresIn: '7d',

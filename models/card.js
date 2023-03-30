@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
+const patternurl = require('../helpers/helper');
 
 const cardSchema = new mongoose.Schema({
   name: {
@@ -13,11 +14,7 @@ const cardSchema = new mongoose.Schema({
     required: true,
     validate: {
       validator(v) {
-        return validator.matches(
-          v,
-          /* eslint-disable-next-line */
-          /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i,
-        );
+        return validator.matches(v, patternurl);
       },
       message: 'Поле "link" должно быть ссылкой',
     },
