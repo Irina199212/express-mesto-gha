@@ -34,7 +34,7 @@ app.post(
       })
       .unknown(true),
   }),
-  createUser
+  createUser,
 );
 app.post('/signin', login);
 
