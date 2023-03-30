@@ -44,7 +44,7 @@ module.exports.deleteCard = (req, res, next) => {
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        next(new NotFoundError('По указанному _id ничего не найдено'));
+        next(new ValidationError('По указанному _id ничего не найдено'));
       } else {
         next(err);
       }
@@ -63,7 +63,7 @@ module.exports.likeCard = (req, res, next) => {
     .then((card) => res.send({ data: card }))
     .catch((err) => {
       if (err.name === 'CastError') {
-        next(new NotFoundError('По указанному _id ничего не найдено'));
+        next(new ValidationError('По указанному _id ничего не найдено'));
       } else {
         next(err);
       }
@@ -82,7 +82,7 @@ module.exports.dislikeCard = (req, res, next) => {
     .then((card) => res.send({ data: card }))
     .catch((err) => {
       if (err.name === 'CastError') {
-        next(new NotFoundError('По указанному _id ничего не найдено'));
+        next(new ValidationError('По указанному _id ничего не найдено'));
       } else {
         next(err);
       }
